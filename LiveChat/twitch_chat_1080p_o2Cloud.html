@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Twitch OBS - Rock & Roll 1920x1080</title>
+    <script src="https://cdn.tailwindcss.com/"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            background: transparent;
+            font-family: 'Rajdhani', sans-serif;
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+        }
+        
+        .rock-gradient {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #0f0f0f 100%);
+        }
+        
+        .amp-bg {
+            background: linear-gradient(135deg, 
+                rgba(0, 0, 0, 0.95) 0%, 
+                rgba(30, 30, 30, 0.95) 25%, 
+                rgba(50, 50, 50, 0.95) 50%, 
+                rgba(20, 20, 20, 0.95) 75%, 
+                rgba(0, 0, 0, 0.95) 100%);
+            backdrop-filter: blur(10px);
+            border: 3px solid #0000FF;
+            box-shadow: 
+                0 0 30px rgba(255, 107, 53, 0.3),
+                inset 0 0 30px rgba(255, 107, 53, 0.1);
+        }
+        
+        .message-card {
+            background: linear-gradient(135deg, 
+                rgba(0, 0, 0, 0.9) 0%, 
+                rgba(30, 30, 30, 0.9) 50%,
+                rgba(0, 0, 0, 0.9) 100%);
+            backdrop-filter: blur(15px);
+            border: 3px solid transparent;
+            border-image: linear-gradient(45deg, #0000FF, #00FF00, #973d1c) 1;
+            box-shadow: 
+                0 6px 30px rgba(255, 107, 53, 0.2),
+                inset 0 2px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .message-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #0000FF, #00FF00, #0000FF, #00FF00, #0000FF);
+            animation: electricPulse 2s infinite;
+        }
+        
+        .message-card::after {
+            content: '⚡';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 16px;
+            opacity: 0.6;
+            animation: sparkle 1.5s infinite;
+        }
+        
+        @keyframes electricPulse {
+            0%, 100% { 
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            50% { 
+                transform: translateX(0%);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes sparkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        
+        .chat-message {
+            animation: rockSlideIn 0.6s ease-out;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        @keyframes rockSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-80px) rotateX(15deg);
+                filter: blur(5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) rotateX(0deg);
+                filter: blur(0px);
+            }
+        }
+        
+        .fade-out {
+            animation: rockFadeOut 1.2s ease-out forwards;
+        }
+        
+        @keyframes rockFadeOut {
+            to {
+                opacity: 0;
+                transform: translateY(-40px) scale(0.9);
+                filter: blur(3px);
+            }
+        }
+        
+        /* Flame GIF Animation */
+        .flame-gif {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            animation: flameIntro 0.8s ease-out forwards;
+        }
+        
+        @keyframes flameIntro {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5) rotate(-10deg);
+            }
+            30% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.1) rotate(2deg);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            }
+        }
+        
+        .flame-gif.hide {
+            animation: flameOutro 0.5s ease-out forwards;
+        }
+        
+        @keyframes flameOutro {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.2) rotate(5deg);
+            }
+        }
+        
+        .username {
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            text-shadow: 
+                0 0 8px currentColor,
+                0 0 15px currentColor,
+                0 0 25px currentColor;
+            letter-spacing: 1.5px;
+            font-size: 1.1rem;
+        }
+        
+        .moderator {
+            color: #0000FF;
+            text-shadow: 
+                0 0 15px #0000FF,
+                0 0 30px #0000FF,
+                0 0 45px #0000FF;
+        }
+        
+        .subscriber {
+            color: #00FF00;
+            text-shadow: 
+                0 0 15px #00FF00,
+                0 0 30px #00FF00;
+        }
+        
+        .vip {
+            color: #e91e63;
+            text-shadow: 
+                0 0 15px #e91e63,
+                0 0 30px #e91e63;
+        }
+        
+        .turbo {
+            color: #9c27b0;
+            text-shadow: 
+                0 0 15px #9c27b0,
+                0 0 30px #9c27b0;
+        }
+        
+        .premium {
+            color: #0000FF;
+            text-shadow: 
+                0 0 15px #0000FF,
+                0 0 30px #0000FF;
+        }
+        
+        .status-connected {
+            background: linear-gradient(135deg, #0000FF, #00FF00);
+            animation: rockPulse 2s infinite;
+            box-shadow: 0 0 25px rgba(255, 107, 53, 0.5);
+        }
+        
+        .status-connecting {
+            background: linear-gradient(135deg, #00FF00, #0000FF);
+            animation: rockPulse 1s infinite;
+        }
+        
+        .status-disconnected {
+            background: linear-gradient(135deg, #666, #333);
+        }
+        
+        @keyframes rockPulse {
+            0%, 100% { 
+                opacity: 1; 
+                transform: scale(1);
+                box-shadow: 0 0 25px rgba(255, 107, 53, 0.5);
+            }
+            50% { 
+                opacity: 0.8; 
+                transform: scale(1.05);
+                box-shadow: 0 0 40px rgba(255, 107, 53, 0.8);
+            }
+        }
+        
+        .guitar-decoration {
+            position: absolute;
+            opacity: 0.12;
+            pointer-events: none;
+            font-size: 6rem;
+        }
+        
+        .floating-guitar {
+            animation: guitarFloat 8s ease-in-out infinite;
+        }
+        
+        @keyframes guitarFloat {
+            0%, 100% { 
+                transform: translateY(0px) rotate(0deg); 
+                opacity: 0.12;
+            }
+            25% { 
+                transform: translateY(-25px) rotate(3deg); 
+                opacity: 0.18;
+            }
+            50% { 
+                transform: translateY(-50px) rotate(-2deg); 
+                opacity: 0.22;
+            }
+            75% { 
+                transform: translateY(-25px) rotate(2deg); 
+                opacity: 0.18;
+            }
+        }
+        
+        .emote {
+            display: inline;
+            height: 2em;
+            vertical-align: middle;
+        }
+        
+        .rock-scrollbar::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        .rock-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+        }
+        
+        .rock-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #0000FF, #00FF00);
+            border-radius: 6px;
+            box-shadow: 0 0 15px rgba(255, 107, 53, 0.3);
+        }
+        
+        .rock-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #00FF00, #0000FF);
+            box-shadow: 0 0 25px rgba(255, 107, 53, 0.5);
+        }
+        
+        .avatar-rock {
+            background: linear-gradient(135deg, #0000FF, #00FF00, #0000FF);
+            box-shadow: 
+                0 0 20px rgba(255, 107, 53, 0.4),
+                inset 0 3px 6px rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
+        }
+        
+        .message-text {
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            font-weight: 500;
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+        
+        /* Chat container optimized for 1920x1080 */
+        .chat-container-1080 {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            width: 600px;
+            max-height: 900px;
+            z-index: 100;
+        }
+        
+        /* Status indicator for 1080p */
+        .status-indicator-1080 {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 25px;
+            z-index: 200;
+        }
+        
+        /* Enhanced decorations for larger screen */
+        .decoration-enhanced {
+            font-size: 8rem;
+            opacity: 0.08;
+        }
+        
+        .decoration-medium {
+            font-size: 5rem;
+            opacity: 0.10;
+        }
+        
+        .decoration-small {
+            font-size: 3rem;
+            opacity: 0.12;
+        }
+    </style>
+</head>
+<body class="relative overflow-hidden">
+    <!-- Enhanced Rock Background Decorations for 1920x1080 -->
+    <div class="guitar-decoration floating-guitar decoration-enhanced" style="top: 100px; left: 100px;">🎸</div>
+    <div class="guitar-decoration floating-guitar decoration-medium" style="top: 200px; right: 200px; animation-delay: -2s;">🤘</div>
+    <div class="guitar-decoration floating-guitar decoration-small" style="bottom: 150px; left: 150px; animation-delay: -4s;">🎵</div>
+    <div class="guitar-decoration floating-guitar decoration-medium" style="top: 400px; right: 300px; animation-delay: -1s;">⚡</div>
+    <div class="guitar-decoration floating-guitar decoration-enhanced" style="bottom: 300px; right: 500px; animation-delay: -3s;">🔥</div>
+    <div class="guitar-decoration floating-guitar decoration-small" style="top: 600px; left: 400px; animation-delay: -5s;">🎸</div>
+    <div class="guitar-decoration floating-guitar decoration-medium" style="top: 300px; left: 800px; animation-delay: -2.5s;">🎤</div>
+    <div class="guitar-decoration floating-guitar decoration-small" style="bottom: 400px; left: 600px; animation-delay: -1.5s;">🥁</div>
+    <div class="guitar-decoration floating-guitar decoration-enhanced" style="top: 150px; right: 600px; animation-delay: -3.5s;">⚡</div>
+    <div class="guitar-decoration floating-guitar decoration-medium" style="bottom: 200px; right: 800px; animation-delay: -4.5s;">🤘</div>
+
+    <!-- Status Indicator optimized for 1080p -->
+    <div id="statusIndicator" class="status-indicator-1080 font-bold text-white shadow-lg hidden">
+        <span id="statusText">🔴 Déconnecté</span>
+    </div>
+    
+    <!-- Chat Container optimized for 1920x1080 -->
+    <div id="chatContainer" class="chat-container-1080 space-y-6 rock-scrollbar overflow-y-auto">
+        <!-- Messages will appear here -->
+    </div>
+
+    <!-- Flame GIF Container -->
+    <div id="flameContainer" class="flame-gif hidden">
+        <img id="flameGif" src="" alt="Flame Effect" style="width: 300px; height: 300px;">
+    </div>
+
+    <script>
+        class TwitchChatOverlay {
+            constructor() {
+                this.ws = null;
+                this.channel = 'o2Cloud'; // Canal par défaut
+                this.maxMessages = 12; // Plus de messages pour l'écran plus grand
+                this.messageTimeout = 35000; // Timeout plus long
+                this.fontSize = 'text-lg'; // Taille de police plus grande
+                this.showBadges = true;
+                this.messageCount = 0;
+                this.connected = false;
+                this.flameGifUrl = 'guitar.gif'; // Remplacez par le chemin de votre GIF
+                this.flameDuration = 5000; // Durée d'affichage du GIF en ms
+                
+                this.initEventListeners();
+                // Connexion automatique au chargement de la page
+                this.connectToTwitch();
+            }
+            
+            initEventListeners() {
+                // F11 for test message
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'F11') {
+                        e.preventDefault();
+                        this.displayMessage('RockStar', '🤘 Ce riff est absolument énorme ! 🎸🔥', {});
+                        console.log('Message de test rock ajouté');
+                    }
+                });
+            }
+            
+            connectToTwitch() {
+                this.updateStatus('🟡 Branchement de l\'ampli...', 'status-connecting');
+                
+                this.ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+                
+                this.ws.onopen = () => {
+                    // Connexion anonyme
+                    this.ws.send('PASS SCHMOOPIIE');
+                    this.ws.send('NICK justinfan' + Math.floor(Math.random() * 100000));
+                    this.ws.send(`JOIN #${this.channel}`);
+                    this.ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
+                };
+                
+                this.ws.onmessage = (event) => {
+                    const message = event.data.trim();
+                    console.log('Raw message:', message); // Debug
+                    
+                    if (message.startsWith('PING')) {
+                        this.ws.send('PONG :tmi.twitch.tv');
+                        return;
+                    }
+                    
+                    if (message.includes('PRIVMSG')) {
+                        this.handleChatMessage(message);
+                    }
+                    
+                    if (message.includes('366')) {
+                        this.updateStatus('🟢 Ampli connecté !', 'status-connected');
+                        this.connected = true;
+                        console.log('Successfully joined channel:', this.channel); // Debug
+                    }
+                };
+                
+                this.ws.onclose = () => {
+                    this.updateStatus('🔴 Ampli déconnecté', 'status-disconnected');
+                    this.connected = false;
+                    setTimeout(() => {
+                        if (!this.connected) {
+                            this.connectToTwitch();
+                        }
+                    }, 5000);
+                };
+                
+                this.ws.onerror = () => {
+                    this.updateStatus('🔴 Problème d\'ampli', 'status-disconnected');
+                };
+            }
+            
+            handleChatMessage(rawMessage) {
+                console.log('Message reçu:', rawMessage); // Debug
+                
+                const parts = rawMessage.split(' ');
+                const messageIndex = parts.findIndex(part => part === 'PRIVMSG') + 2;
+                const message = parts.slice(messageIndex).join(' ').substring(1);
+                
+                // Parse tags
+                const tagsPart = rawMessage.split(' ')[0];
+                const tags = this.parseTags(tagsPart);
+                
+                // Extract username
+                const userPart = rawMessage.split(' ')[1];
+                const username = userPart.split('!')[0].substring(1);
+                
+                console.log('Username:', username, 'Message:', message); // Debug
+                this.displayMessage(username, message, tags);
+            }
+            
+            parseTags(tagsPart) {
+                const tags = {};
+                if (tagsPart.startsWith('@')) {
+                    const tagString = tagsPart.substring(1);
+                    tagString.split(';').forEach(tag => {
+                        const [key, value] = tag.split('=');
+                        tags[key] = value;
+                    });
+                }
+                return tags;
+            }
+            
+            showFlameEffect() {
+                return new Promise((resolve) => {
+                    const flameContainer = document.getElementById('flameContainer');
+                    const flameGif = document.getElementById('flameGif');
+                    
+                    // Définir l'URL du GIF
+                    flameGif.src = this.flameGifUrl;
+                    
+                    // Afficher le GIF avec animation
+                    flameContainer.classList.remove('hidden', 'hide');
+                    
+                    // Masquer après la durée spécifiée
+                    setTimeout(() => {
+                        flameContainer.classList.add('hide');
+                        
+                        // Attendre la fin de l'animation de sortie
+                        setTimeout(() => {
+                            flameContainer.classList.add('hidden');
+                            flameContainer.classList.remove('hide');
+                            resolve();
+                        }, 500); // Durée de l'animation de sortie
+                    }, this.flameDuration);
+                });
+            }
+            
+            async displayMessage(username, message, tags) {
+                // Afficher d'abord l'effet de flamme
+                await this.showFlameEffect();
+                
+                // Puis afficher le message
+                const container = document.getElementById('chatContainer');
+                const messageEl = document.createElement('div');
+                messageEl.className = `chat-message message-card p-6 rounded-xl ${this.fontSize} relative`;
+                
+                let userClass = 'text-white username';
+                let badges = '';
+                
+                if (this.showBadges && tags) {
+                    if (tags.mod === '1') userClass += ' moderator';
+                    if (tags.subscriber === '1') userClass += ' subscriber';
+                    if (tags.badges && tags.badges.includes('vip')) userClass += ' vip';
+                    if (tags.turbo === '1') userClass += ' turbo';
+                    if (tags.badges && tags.badges.includes('premium')) userClass += ' premium';
+                    
+                    // Add badges with rock emojis
+                    if (tags.badges) {
+                        const badgeList = tags.badges.split(',');
+                        badgeList.forEach(badge => {
+                            const [badgeType] = badge.split('/');
+                            badges += this.getBadgeIcon(badgeType);
+                        });
+                    }
+                }
+                
+                messageEl.innerHTML = `
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="avatar-rock rounded-full flex items-center justify-center text-white font-bold">
+                                ${username.charAt(0).toUpperCase()}
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center space-x-3 mb-2">
+                                <span class="${userClass}">${badges}${username}</span>
+                                <span class="text-orange-400 text-lg">🤘</span>
+                            </div>
+                            <div class="message-text leading-relaxed">${this.processEmotes(message, tags)}</div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(messageEl);
+                
+                // Remove old messages
+                const messages = container.children;
+                if (messages.length > this.maxMessages) {
+                    messages[0].classList.add('fade-out');
+                    setTimeout(() => {
+                        if (messages[0]) {
+                            messages[0].remove();
+                        }
+                    }, 1200);
+                }
+                
+                // Auto-remove after timeout
+                setTimeout(() => {
+                    if (messageEl.parentNode) {
+                        messageEl.classList.add('fade-out');
+                        setTimeout(() => {
+                            if (messageEl.parentNode) {
+                                messageEl.remove();
+                            }
+                        }, 1200);
+                    }
+                }, this.messageTimeout);
+            }
+            
+            getBadgeIcon(badgeType) {
+                const icons = {
+                    'moderator': '🛡️',
+                    'subscriber': '⭐',
+                    'vip': '👑',
+                    'turbo': '⚡',
+                    'premium': '💎',
+                    'broadcaster': '🎸'
+                };
+                return icons[badgeType] || '';
+            }
+            
+            processEmotes(message, tags) {
+                // Enhanced emote processing with rock theme
+                return message
+                    .replace(/:\)/g, '😊')
+                    .replace(/:\(/g, '😢')
+                    .replace(/:D/g, '😃')
+                    .replace(/:P/g, '😛')
+                    .replace(/<3/g, '🤘')
+                    .replace(/Kappa/g, '🎸')
+                    .replace(/PogChamp/g, '🔥')
+                    .replace(/EZ/g, '⚡')
+                    .replace(/GG/g, '🤘')
+                    .replace(/sick/gi, '🔥')
+                    .replace(/rock/gi, '🤘')
+                    .replace(/metal/gi, '⚡')
+                    .replace(/guitar/gi, '🎸')
+                    .replace(/riff/gi, '🎵')
+                    .replace(/solo/gi, '🎸🔥');
+            }
+            
+            updateStatus(text, statusClass) {
+                const indicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                
+                statusText.textContent = text;
+                indicator.className = `status-indicator-1080 font-bold text-white shadow-lg ${statusClass}`;
+                indicator.classList.remove('hidden');
+            }
+            
+            disconnect() {
+                if (this.ws) {
+                    this.ws.close();
+                    this.ws = null;
+                }
+                this.connected = false;
+            }
+            
+            // Méthode pour changer l'URL du GIF
+            setFlameGifUrl(url) {
+                this.flameGifUrl = url;
+            }
+            
+            // Méthode pour changer la durée d'affichage du GIF
+            setFlameDuration(duration) {
+                this.flameDuration = duration;
+            }
+        }
+        
+        // Initialize the rock overlay
+        const overlay = new TwitchChatOverlay();
+        
+        // Exemple pour personnaliser le GIF (optionnel)
+        // overlay.setFlameGifUrl('votre-gif-flamme.gif');
+        // overlay.setFlameDuration(1500); // 1.5 secondes
+    </script>
+</body>
+</html>
